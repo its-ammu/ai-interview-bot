@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ test.title }} - AI Interview Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="py-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">{{ test.title }}</h1>
+                    <p class="text-muted mb-0">{{ test.description }}</p>
+                </div>
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('candidate_home') }}" class="btn btn-outline-secondary btn-sm me-2">Back to Dashboard</a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+                </div>
+            </div>
+        </header>
+        
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Questions</h5>
+                        <div class="list-group">
+                            {% for question in questions %}
+                                <a href="{{ url_for('candidate_question', question_id=question.id) }}" 
+                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+                                          {% if question.answer %}bg-light{% endif %}">
+                                    Question {{ loop.index }}
+                                    {% if question.answer %}
+                                        <span class="badge bg-success rounded-pill">
+                                            <i class="fas fa-check"></i>
+                                        </span>
+                                    {% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if test.status != 'Completed' %}
+                            <button id="completeTest" class="btn btn-success w-100 mt-3">Complete Test</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="questionContainer">
+                            <h5 class="card-title">Select a question from the list to begin</h5>
+                            <p class="text-muted">Click on any question from the left panel to start answering.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const completeTestBtn = document.getElementById('completeTest');
+            if (completeTestBtn) {
+                completeTestBtn.addEventListener('click', async function() {
+                    if (confirm('Are you sure you want to complete this test? You won\'t be able to modify your answers after completion.')) {
+                        try {
+                            const response = await fetch('/api/complete-test/{{ test.id }}', {
+                                method: 'POST'
+                            });
+                            
+                            const data = await response.json();
+                            if (data.status === 'success') {
+                                window.location.href = '{{ url_for("candidate_home") }}';
+                            }
+                        } catch (err) {
+                            console.error('Error completing test:', err);
+                            alert('Error completing test. Please try again.');
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html> 

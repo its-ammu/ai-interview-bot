@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="py-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">AI Interview Assistant</h1>
+                <div class="d-flex align-items-center">
+                    <span class="me-3">Welcome, {{ session['user'] }}</span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+                </div>
+            </div>
+        </header>
+        
+        <div class="row mt-4">
+            <!-- Left Panel -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Current Question</h5>
+                        <p class="question-text" id="currentQuestion">Tell me about a challenge you overcame?</p>
+                        <button class="btn btn-primary btn-lg" id="recordButton">
+                            <i class="fas fa-microphone"></i> Record Answer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Answer Transcript</h5>
+                        <div class="transcript-box" id="transcriptBox">
+                            Your answer will appear here...
+                        </div>
+                    </div>
+                </div>
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Feedback Summary</h5>
+                        <div class="feedback-box" id="feedbackBox">
+                            Feedback will appear after submission...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+    <script src="{{ url_for('static', filename='js/candidate.js') }}"></script>
+</body>
+</html> 
