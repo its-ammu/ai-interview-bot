@@ -3,6 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from functools import wraps
 import json
+import openai
+import os
+from io import BytesIO
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///interview.db'
@@ -169,7 +173,7 @@ def candidate_home():
 @role_required('candidate')
 def candidate_test(test_id):
     test = Test.query.get_or_404(test_id)
-    questions = Question.query.filter_by(test_id=testid).order_by(Question.order).all()
+    questions = Question.query.filter_by(test_id=test_id).order_by(Question.order).all()
     
     # Update test status to In Progress if it's Pending
     if test.status == 'Pending':
@@ -201,10 +205,31 @@ def candidate_question(question_id):
 def record_answer():
     question_id = request.form.get('question_id')
     question = Question.query.get_or_404(question_id)
-    
-    # TODO: Implement voice recording and transcription
-    # For now, just update the question with a dummy answer
-    question.answer = "This is a sample answer for the question."
+
+    try:
+        audio_file = request.files.get('audio')
+        if not audio_file:
+            return jsonify({'status': 'error', 'message': 'No audio file provided'}), 400
+
+        # Read the uploaded file and wrap it in BytesIO with a proper filename
+        file_stream = BytesIO(audio_file.read())
+        file_stream.name = "upload.wav"  # Important for OpenAI
+        file_stream.seek(0)
+
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+
+        # Send the file to OpenAI Whisper
+        response = openai.Audio.transcribe(
+            model="whisper-1",
+            file=file_stream,
+            response_format="text",
+            language="en"
+        )
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error processing audio: {str(e)}'}), 500
+
+    question.answer = response
     db.session.commit()
     
     return jsonify({
