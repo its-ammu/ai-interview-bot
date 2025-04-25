@@ -6,6 +6,7 @@ import json
 import openai
 import os
 from io import BytesIO
+from flask_migrate import Migrate
 
 
 app = Flask(__name__)
@@ -13,6 +14,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///interview.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this to a secure secret key in production
 db = SQLAlchemy(app)
+
+# Assuming `db` is already initialized
+migrate = Migrate(app, db)
 
 # Models
 class Candidate(db.Model):
@@ -52,25 +56,45 @@ class Question(db.Model):
     score = db.Column(db.Float)
     feedback = db.Column(db.Text)
 
-# TODO: Move to database later
-# Hardcoded users for now
-USERS = {
-    'candidate': {'username': 'candidate', 'password': 'candidate123', 'role': 'candidate'},
-    'admin': {'username': 'admin', 'password': 'admin123', 'role': 'admin'}
-}
 
-# TODO: Move to database later
-# Hardcoded sample questions for now
-SAMPLE_QUESTIONS = [
-    "Tell me about a challenge you overcame?",
-    "What are your greatest strengths and weaknesses?",
-    "Where do you see yourself in 5 years?",
-    "Why should we hire you?",
-    "Describe a situation where you showed leadership.",
-    "How do you handle stress and pressure?",
-    "What is your approach to problem-solving?",
-    "Tell me about a time you failed and what you learned from it."
-]
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    role = db.Column(db.String(20), nullable=False)
+
+class SampleQuestion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String(500), nullable=False)
+
+def create_default_admin():
+    # Check if the admin user already exists
+    admin_user = User.query.filter_by(username="admin").first()
+    if not admin_user:
+        # Create the default admin user
+        admin_user = User(username="admin", password="admin123", role="admin")
+        db.session.add(admin_user)
+        db.session.commit()
+
+def populate_sample_questions():
+    sample_questions = [
+        "Tell me about a challenge you overcame?",
+        "What are your greatest strengths and weaknesses?",
+        "Where do you see yourself in 5 years?",
+        "Why should we hire you?",
+        "Describe a situation where you showed leadership.",
+        "How do you handle stress and pressure?",
+        "What is your approach to problem-solving?",
+        "Tell me about a time you failed and what you learned from it."
+    ]
+
+    for question_text in sample_questions:
+        existing_question = SampleQuestion.query.filter_by(text=question_text).first()
+        if not existing_question:
+            question = SampleQuestion(text=question_text)
+            db.session.add(question)
+
+    db.session.commit()
 
 # Login required decorator
 def login_required(f):
@@ -104,6 +128,28 @@ def index():
             return redirect(url_for('admin_dashboard'))
     return redirect(url_for('login'))
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # Check if the username already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already exists. Please choose a different one.', 'danger')
+            return redirect(url_for('register'))
+
+        # Create a new user and store it in the database
+        new_user = User(username=username, password=password, role='candidate')  # Default role is 'candidate'
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash('Registration successful! You can now log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -111,13 +157,14 @@ def login():
         password = request.form.get('password')
         
         # Check if user exists and password is correct
-        if username in USERS and USERS[username]['password'] == password:
-            session['user'] = username
-            session['role'] = USERS[username]['role']
-            flash(f'Welcome, {username}!', 'success')
+        user = User.query.filter_by(username=username, password=password).first()
+        if user:
+            session['user'] = user.username
+            session['role'] = user.role
+            flash(f'Welcome, {user.username}!', 'success')
             
             # Redirect based on role
-            if USERS[username]['role'] == 'candidate':
+            if user.role == 'candidate':
                 return redirect(url_for('candidate_home'))
             else:
                 return redirect(url_for('admin_dashboard'))
@@ -144,6 +191,7 @@ def candidate_home():
         # Create a sample candidate if not exists
         candidate = Candidate(name=session['user'], position="Software Engineer")
         db.session.add(candidate)
+        db.session.commit()
         
         # Create a sample test for the new candidate
         test = Test(
@@ -152,12 +200,14 @@ def candidate_home():
             candidate_id=candidate.id
         )
         db.session.add(test)
+        db.session.commit()
         
         # Add sample questions to the test
-        for i, question_text in enumerate(SAMPLE_QUESTIONS[:3], 1):  # Add first 3 sample questions
+        sample_questions = SampleQuestion.query.limit(3).all()
+        for i, question_text in enumerate(sample_questions[:3], 1):  # Add first 3 sample questions
             question = Question(
                 test_id=test.id,
-                text=question_text,
+                text=question_text.text,
                 order=i
             )
             db.session.add(question)
@@ -181,6 +231,21 @@ def candidate_test(test_id):
         db.session.commit()
     
     return render_template('candidate_test.html', test=test, questions=questions)
+
+@app.route('/api/test/<int:test_id>', methods=['GET'])
+def get_test_details(test_id):
+    try:
+        test = Test.query.get_or_404(test_id)
+        questions = [{
+            'text': q.text,
+            'answer': q.answer,
+            'score': q.score,
+            'feedback': q.feedback
+        } for q in test.questions]
+        return jsonify({'status': 'success', 'test': {'title': test.title, 'description': test.description, 'questions': questions}})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 
 @app.route('/candidate/question/<int:question_id>')
 @login_required
@@ -315,12 +380,20 @@ def create_test():
 @login_required
 @role_required('admin')
 def generate_questions():
-    # TODO: Implement AI question generation
-    # For now, return sample questions
-    return jsonify({
-        'status': 'success',
-        'questions': SAMPLE_QUESTIONS
-    })
+    try:
+        # Fetch all sample questions from the database
+        sample_questions = SampleQuestion.query.all()
+        questions = [q.text for q in sample_questions]
+
+        return jsonify({
+            'status': 'success',
+            'questions': questions
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to generate questions: {str(e)}'
+        }), 500
 
 @app.route('/api/check-answer', methods=['POST'])
 @login_required
@@ -410,4 +483,7 @@ def create_example_data():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        create_default_admin()  # Ensure the default admin is created
+        populate_sample_questions()  # Populate sample questions
+
     app.run(debug=True) 

@@ -6,68 +6,58 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendQuestionBtn = document.getElementById('sendQuestion');
     const candidateModal = new bootstrap.Modal(document.getElementById('candidateModal'));
 
-    // Generate Questions
-    generateQuestionsBtn.addEventListener('click', async function() {
-        try {
-            const response = await fetch('/api/generate-questions', {
-                method: 'POST'
-            });
-            
-            const data = await response.json();
-            if (data.status === 'success') {
-                displayQuestions(data.questions);
-            }
-        } catch (err) {
-            console.error('Error generating questions:', err);
-            alert('Error generating questions. Please try again.');
-        }
-    });
+    // Ensure elements are found before adding event listeners
+    if (generateQuestionsBtn) {
+        generateQuestionsBtn.addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/generate-questions', {
+                    method: 'POST'
+                });
 
-    // Display generated questions
-    function displayQuestions(questions) {
-        questionList.innerHTML = '';
-        questions.forEach((question, index) => {
-            const questionElement = document.createElement('div');
-            questionElement.className = 'question-item p-2 border-bottom';
-            questionElement.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <span>${index + 1}. ${question}</span>
-                    <button class="btn btn-sm btn-outline-primary edit-question" data-index="${index}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                </div>
-            `;
-            questionList.appendChild(questionElement);
+                const data = await response.json();
+                if (data.status === 'success') {
+                    displayQuestions(data.questions);
+                }
+            } catch (err) {
+                console.error('Error generating questions:', err);
+                alert('Error generating questions. Please try again.');
+            }
         });
+    } else {
+        console.error('Element #generateQuestions not found.');
     }
 
     // Question Answering Bot
-    sendQuestionBtn.addEventListener('click', async function() {
-        const question = questionInput.value.trim();
-        if (!question) return;
+    if (sendQuestionBtn) {
+        sendQuestionBtn.addEventListener('click', async function() {
+            const question = questionInput.value.trim();
+            if (!question) return;
 
-        // Add user question to chat
-        addMessageToChat('user', question);
-        questionInput.value = '';
+            // Add user question to chat
+            addMessageToChat('user', question);
+            questionInput.value = '';
 
-        try {
-            const response = await fetch('/api/check-answer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ question })
-            });
-            
-            const data = await response.json();
-            if (data.status === 'success') {
-                addMessageToChat('bot', data.answer);
+            try {
+                const response = await fetch('/api/check-answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    addMessageToChat('bot', data.answer);
+                }
+            } catch (err) {
+                console.error('Error checking answer:', err);
+                addMessageToChat('bot', 'Sorry, I encountered an error processing your question.');
             }
-        } catch (err) {
-            console.error('Error checking answer:', err);
-            addMessageToChat('bot', 'Sorry, I encountered an error processing your question.');
-        }
-    });
+        });
+    } else {
+        console.error('Element #sendQuestion not found.');
+    }
 
     // Add message to chat interface
     function addMessageToChat(sender, message) {
@@ -81,13 +71,13 @@ document.addEventListener('DOMContentLoaded', function() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // View candidate details
-    document.querySelectorAll('.view-details').forEach(button => {
-        button.addEventListener('click', function() {
-            const candidateId = this.dataset.id;
+    // View candidate details using event delegation
+    document.querySelector('.container-fluid').addEventListener('click', function(event) {
+        if (event.target && event.target.classList.contains('view-details')) {
+            const candidateId = event.target.dataset.id;
             loadCandidateDetails(candidateId);
             candidateModal.show();
-        });
+        }
     });
 
     // Load candidate details
@@ -109,16 +99,31 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayCandidateDetails(candidate) {
         const questionBreakdown = document.querySelector('.question-breakdown');
         const audioPlayer = document.querySelector('.audio-player');
-        
-        // Display question breakdown
-        questionBreakdown.innerHTML = candidate.questions.map(q => `
-            <div class="question-item mb-3">
-                <h6>${q.question}</h6>
-                <p class="mb-1">Answer: ${q.answer}</p>
-                <p class="mb-1">Score: ${q.score}</p>
-                <p class="mb-0">Feedback: ${q.feedback}</p>
-            </div>
-        `).join('');
+
+        // Clear the previous content
+        questionBreakdown.innerHTML = '';
+
+        // Ensure candidate has tests and that tests are an array
+        if (candidate.tests && Array.isArray(candidate.tests)) {
+            candidate.tests.forEach(test => {
+                // Check if the test has questions
+                if (test.questions && Array.isArray(test.questions)) {
+                    test.questions.forEach(q => {
+                        // Display question breakdown for each question
+                        questionBreakdown.innerHTML += `
+                        <div class="question-item mb-3">
+                            <h6>${q.question}</h6>
+                            <p class="mb-1">Answer: ${q.answer}</p>
+                            <p class="mb-1">Score: ${q.score}</p>
+                            <p class="mb-0">Feedback: ${q.feedback}</p>
+                        </div>
+                    `;
+                    });
+                }
+            });
+        } else {
+            console.error("No valid tests found for this candidate.");
+        }
 
         // Display audio player if audio exists
         if (candidate.audio_path) {
@@ -133,9 +138,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+
     // Download scorecard
-    document.getElementById('downloadScorecard').addEventListener('click', function() {
-        // TODO: Implement scorecard download functionality
-        alert('Scorecard download functionality will be implemented here');
-    });
-}); 
+    if (document.getElementById('downloadScorecard')) {
+        document.getElementById('downloadScorecard').addEventListener('click', function() {
+            // TODO: Implement scorecard download functionality
+            alert('Scorecard download functionality will be implemented here');
+        });
+    } else {
+        console.error('Element #downloadScorecard not found.');
+    }
+});
