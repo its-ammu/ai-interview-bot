@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from functools import wraps
@@ -12,6 +12,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
 from transformers import pipeline, AutoTokenizer, AutoModelForQuestionAnswering
+from gtts import gTTS
 
 # Load environment variables
 load_dotenv()
@@ -833,6 +834,27 @@ def update_question_score(question_id):
             'status': 'error',
             'message': f'Failed to update score: {str(e)}'
         }), 500
+
+@app.route('/text-to-speech')
+def text_to_speech():
+    text = request.args.get('text', '')
+    if not text:
+        return "No text provided", 400
+    
+    # Create gTTS object
+    tts = gTTS(text=text, lang='en', slow=False)
+    
+    # Save to BytesIO object
+    audio_file = BytesIO()
+    tts.write_to_fp(audio_file)
+    audio_file.seek(0)
+    
+    return send_file(
+        audio_file,
+        mimetype='audio/mpeg',
+        as_attachment=False,
+        download_name='question.mp3'
+    )
 
 if __name__ == '__main__':
     with app.app_context():

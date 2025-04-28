@@ -15,3 +15,4 @@ tqdm
 regex
 packaging
 filelock
+gTTS==2.5.1
