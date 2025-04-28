@@ -59,6 +59,12 @@
                                                 <button class="btn btn-sm btn-info view-test" data-id="{{ test.id }}">
                                                     View Details
                                                 </button>
+                                                {% if test.status == 'Completed' %}
+                                                    <a href="{{ url_for('evaluate_test', test_id=test.id) }}" 
+                                                       class="btn btn-sm btn-success">
+                                                        Evaluate
+                                                    </a>
+                                                {% endif %}
                                                 {% if test.status == 'Pending' %}
                                                     <button class="btn btn-sm btn-danger delete-test" data-id="{{ test.id }}">
                                                         Delete

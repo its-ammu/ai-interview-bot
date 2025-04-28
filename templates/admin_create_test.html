@@ -89,8 +89,16 @@
             // Generate questions
             generateQuestionsBtn.addEventListener('click', async function() {
                 try {
+                    const candidateSelect = document.getElementById('candidate_id');
+                    const selectedOption = candidateSelect.options[candidateSelect.selectedIndex];
+                    const position = selectedOption.text.split(' - ')[1] || 'Software Engineer';
+                    
                     const response = await fetch('/api/generate-questions', {
-                        method: 'POST'
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ position: position })
                     });
                     
                     const data = await response.json();
@@ -98,9 +106,9 @@
                         // Clear existing questions
                         questionsContainer.innerHTML = '';
                         
-                        // Add generated questions
-                        data.questions.forEach(question => {
-                            addQuestionField(question);
+                        // Add generated questions with their context
+                        data.questions.forEach(qa => {
+                            addQuestionField(qa.question, qa.context);
                         });
                     }
                 } catch (err) {
@@ -110,22 +118,46 @@
             });
 
             // Remove question field
-            questionsContainer.addEventListener('click', function(e) {
+            questionsContainer.addEventListener('click', async function(e) {
                 if (e.target.classList.contains('remove-question')) {
                     const questionItem = e.target.closest('.question-item');
-                    if (questionsContainer.children.length > 1) {
+                    const questionInput = questionItem.querySelector('input');
+                    const questionId = questionInput.dataset.questionId;
+                    
+                    if (questionId) {
+                        try {
+                            const response = await fetch(`/api/question/${questionId}`, {
+                                method: 'DELETE'
+                            });
+                            
+                            const data = await response.json();
+                            if (data.status === 'success') {
+                                questionItem.remove();
+                            } else {
+                                alert('Failed to delete question. Please try again.');
+                            }
+                        } catch (err) {
+                            console.error('Error deleting question:', err);
+                            alert('Error deleting question. Please try again.');
+                        }
+                    } else {
                         questionItem.remove();
                     }
                 }
             });
 
-            function addQuestionField(value = '') {
+            function addQuestionField(value = '', context = '', questionId = '') {
                 const questionItem = document.createElement('div');
-                questionItem.className = 'question-item mb-2';
+                questionItem.className = 'question-item mb-3';
                 questionItem.innerHTML = `
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="questions" value="${value}" required>
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control" name="questions" value="${value}" 
+                               data-question-id="${questionId}" required>
                         <button type="button" class="btn btn-outline-danger remove-question">Remove</button>
+                    </div>
+                    <div class="context-container">
+                        <textarea class="form-control bg-light" name="contexts" rows="3" 
+                                placeholder="Question context/answer will appear here" readonly>${context}</textarea>
                     </div>
                 `;
                 questionsContainer.appendChild(questionItem);

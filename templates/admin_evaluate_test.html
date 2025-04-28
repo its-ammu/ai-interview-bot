@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Evaluate Test: {{ test.title }}</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Test Description</h5>
+            <p class="card-text">{{ test.description }}</p>
+        </div>
+    </div>
+
+    {% for question in questions %}
+    <div class="card mb-4" id="question-{{ question.id }}">
+        <div class="card-body">
+            <h5 class="card-title">Question {{ question.order }}</h5>
+            <p class="card-text">{{ question.text }}</p>
+            
+            {% if question.context %}
+            <div class="context-section mb-3">
+                <h6>Context:</h6>
+                <p class="text-muted">{{ question.context }}</p>
+            </div>
+            {% endif %}
+
+            {% if question.answer %}
+            <div class="answer-section mb-3">
+                <h6>Candidate's Answer:</h6>
+                <p>{{ question.answer }}</p>
+            </div>
+            {% endif %}
+
+            <div class="model-answer-section mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Model's Answer:</h6>
+                    <button class="btn btn-sm btn-primary evaluate-ai" data-question-id="{{ question.id }}">
+                        <i class="fas fa-robot"></i> Evaluate with AI
+                    </button>
+                </div>
+                <div id="model-answer-{{ question.id }}" class="text-primary">
+                    <div class="text-muted">Click "Evaluate with AI" to get the model's answer</div>
+                </div>
+            </div>
+
+            <div class="evaluation-form">
+                <h6>Evaluation:</h6>
+                <form id="evaluation-form-{{ question.id }}" class="mb-3">
+                    <div class="form-group">
+                        <label for="score-{{ question.id }}">Score (0-10):</label>
+                        <input type="number" class="form-control" id="score-{{ question.id }}" 
+                               min="0" max="10" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-{{ question.id }}">Feedback:</label>
+                        <textarea class="form-control" id="feedback-{{ question.id }}" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Evaluation</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to load model's answer for a question
+    async function loadModelAnswer(questionId) {
+        const answerElement = document.getElementById(`model-answer-${questionId}`);
+        answerElement.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Evaluating...</p></div>';
+        
+        try {
+            const response = await fetch(`/api/evaluate-question/${questionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                answerElement.innerHTML = `<p>${data.model_answer}</p>`;
+            } else {
+                answerElement.innerHTML = `<div class="text-danger">Error: ${data.message}</div>`;
+            }
+        } catch (error) {
+            console.error('Error loading model answer:', error);
+            answerElement.innerHTML = '<div class="text-danger">Error evaluating answer. Please try again.</div>';
+        }
+    }
+
+    // Function to submit evaluation
+    async function submitEvaluation(questionId, score, feedback) {
+        try {
+            const response = await fetch(`/api/update-question-score/${questionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ score, feedback })
+            });
+            
+            const data = await response.json();
+            if (data.status === 'success') {
+                alert('Evaluation submitted successfully!');
+            } else {
+                alert('Error submitting evaluation: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error submitting evaluation:', error);
+            alert('Error submitting evaluation. Please try again.');
+        }
+    }
+
+    // Add event listeners to AI evaluation buttons
+    document.querySelectorAll('.evaluate-ai').forEach(button => {
+        button.addEventListener('click', function() {
+            const questionId = this.dataset.questionId;
+            loadModelAnswer(questionId);
+        });
+    });
+
+    // Add event listeners to evaluation forms
+    {% for question in questions %}
+    document.getElementById('evaluation-form-{{ question.id }}').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const score = document.getElementById('score-{{ question.id }}').value;
+        const feedback = document.getElementById('feedback-{{ question.id }}').value;
+        submitEvaluation({{ question.id }}, score, feedback);
+    });
+    {% endfor %}
+});
+</script>
+{% endblock %} 
