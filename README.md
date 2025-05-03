@@ -6,7 +6,7 @@ A Flask-based web application that provides an AI-powered interview system with 
 
 ### Candidate Interface
 - Voice recording for interview answers
-- Real-time transcription
+- Real-time transcription using OpenAI Whisper API
 - AI-powered feedback
 - Modern, responsive design
 
@@ -42,19 +42,36 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Initialize the database:
+4. Set up environment variables:
+Create a `.env` file in the root directory with the following variables:
+```
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+5. Initialize the database:
 ```bash
 flask db init
 flask db migrate
 flask db upgrade
 ```
 
-5. Run the application:
+6. Run the application:
 ```bash
 python app.py
 ```
 
 The application will be available at `http://localhost:5000`
+
+## Dependencies
+
+The application uses the following key dependencies:
+- Flask: Web framework
+- OpenAI Python SDK (v1.0.0+): For audio transcription and AI features
+- Flask-SQLAlchemy: Database ORM
+- Flask-Migrate: Database migrations
+- LangChain: For AI-powered question generation and feedback
+- Transformers: For question answering
+- gTTS: For text-to-speech conversion
 
 ## Login Credentials
 
@@ -76,6 +93,7 @@ For testing purposes, the following credentials are available:
 .
 ├── app.py              # Main Flask application
 ├── requirements.txt    # Python dependencies
+├── .env                # Environment variables (not in repo)
 ├── static/            # Static files
 │   ├── css/
 │   │   └── style.css
@@ -90,7 +108,7 @@ For testing purposes, the following credentials are available:
 
 ## API Endpoints
 
-- `POST /api/record-answer`: Record and process interview answers
+- `POST /api/record-answer`: Record and process interview answers (uses OpenAI Whisper API)
 - `POST /api/submit-feedback`: Submit feedback for review
 - `POST /api/generate-questions`: Generate new interview questions
 - `POST /api/check-answer`: Check answers using the QA bot
@@ -103,6 +121,8 @@ For testing purposes, the following credentials are available:
 - Add user registration functionality
 - Implement email verification
 - Add password reset functionality
+- Implement rate limiting for API calls
+- Add error handling for OpenAI API failures
 
 ## Contributing
 
