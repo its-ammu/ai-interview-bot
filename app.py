@@ -130,29 +130,29 @@ def create_default_admin():
     admin_user = User.query.filter_by(username="admin").first()
     if not admin_user:
         # Create the default admin user
-        admin_user = User(username="admin", password="admin123", role="admin")
+        admin_user = User(username="admin", password="api@admin", role="admin")
         db.session.add(admin_user)
         db.session.commit()
 
-def populate_sample_questions():
-    sample_questions = [
-        "Tell me about a challenge you overcame?",
-        "What are your greatest strengths and weaknesses?",
-        "Where do you see yourself in 5 years?",
-        "Why should we hire you?",
-        "Describe a situation where you showed leadership.",
-        "How do you handle stress and pressure?",
-        "What is your approach to problem-solving?",
-        "Tell me about a time you failed and what you learned from it."
-    ]
+# def populate_sample_questions():
+#     sample_questions = [
+#         "Tell me about a challenge you overcame?",
+#         "What are your greatest strengths and weaknesses?",
+#         "Where do you see yourself in 5 years?",
+#         "Why should we hire you?",
+#         "Describe a situation where you showed leadership.",
+#         "How do you handle stress and pressure?",
+#         "What is your approach to problem-solving?",
+#         "Tell me about a time you failed and what you learned from it."
+#     ]
 
-    for question_text in sample_questions:
-        existing_question = SampleQuestion.query.filter_by(text=question_text).first()
-        if not existing_question:
-            question = SampleQuestion(text=question_text)
-            db.session.add(question)
+#     for question_text in sample_questions:
+#         existing_question = SampleQuestion.query.filter_by(text=question_text).first()
+#         if not existing_question:
+#             question = SampleQuestion(text=question_text)
+#             db.session.add(question)
 
-    db.session.commit()
+#     db.session.commit()
 
 # Login required decorator
 def login_required(f):
@@ -620,7 +620,7 @@ def generate_questions():
 @login_required
 @role_required('admin')
 def check_answer():
-    # TODO: Implement answer checking
+    # TODO: Not Used 
     return jsonify({
         'status': 'success',
         'answer': "This is a sample answer from the AI."
@@ -861,6 +861,6 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_default_admin()  # Ensure the default admin is created
-        populate_sample_questions()  # Populate sample questions
+        # populate_sample_questions()  # Populate sample questions
 
     app.run(debug=True) 

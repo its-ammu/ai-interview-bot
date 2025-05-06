@@ -103,10 +103,7 @@
                     
                     const data = await response.json();
                     if (data.status === 'success') {
-                        // Clear existing questions
-                        questionsContainer.innerHTML = '';
-                        
-                        // Add generated questions with their context
+                        // Add generated questions with their context without clearing existing ones
                         data.questions.forEach(qa => {
                             addQuestionField(qa.question, qa.context);
                         });
@@ -156,8 +153,8 @@
                         <button type="button" class="btn btn-outline-danger remove-question">Remove</button>
                     </div>
                     <div class="context-container">
-                        <textarea class="form-control bg-light" name="contexts" rows="3" 
-                                placeholder="Question context/answer will appear here" readonly>${context}</textarea>
+                        <textarea class="form-control" name="contexts" rows="3" 
+                                placeholder="Enter question context/answer here">${context}</textarea>
                     </div>
                 `;
                 questionsContainer.appendChild(questionItem);
